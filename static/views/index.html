@@ -1,0 +1,137 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="/css/index.css" />
+</head>
+<body>
+    <div id="topBar">
+    
+        <a href="javascript:void(0)" class="brand">
+            <span class="color">css</span>Pad
+        </a>
+        <span class="select-wrap">
+            <select id="select_model_list" onchange="changemedel(this)">
+            </select>
+            <input type="button" name="deletebtn" class="btn saveBtn deletecurrent" value="Delete current" />
+        </span>
+        <span class="newmodel-wrap">
+            <input type="text" id="newmodel-input">
+            <input type="button" name="addbtn" class="btn saveBtn addNew" value="Add" />
+        </span>
+        <input type="button" name="saveBtn" class="btn saveBtn saveAsFile" value="Save as a html" />
+        <input type="button" name="saveToDb" class="btn saveBtn savetoDb" value="Save" />
+    
+    </div>
+    
+    <div id="leftSide">
+    
+        <div id="html">
+    
+            <div class="titleBar">HTML</div>
+    
+            <div id="htmlEditor">
+            </div>
+    
+        </div>
+    
+        <div id="css">
+    
+            <div class="titleBar">CSS</div>
+    
+            <div id="cssEditor">
+            </div>
+    
+        </div>
+    
+    </div>
+    
+    <div id="outputWindow">
+    
+        <iframe name="project" id="projectIframe" src="about:blank"></iframe>
+    
+    </div>
+    <script src="/js/jquery.js"></script>
+    <!-- <script src="jqueryui.js"></script> -->
+    <script src="/js/ace.js"></script>
+    <script src="/js/index.js"></script>
+    
+    <script>
+        var cssEditor = ace.edit("cssEditor");
+        cssEditor.setTheme("ace/theme/tomorrow");
+        cssEditor.getSession().setMode("ace/mode/css");
+
+        var htmlEditor = ace.edit("htmlEditor");
+        htmlEditor.setTheme("ace/theme/tomorrow");
+        htmlEditor.getSession().setMode("ace/mode/html");
+
+        function changemedel(tag){
+            const key = $(tag).val();
+            queryCssModel(key);
+        }
+        function queryCssModel(key) {
+            $.get("/service/query", { key: key }, function(data){
+                console.info(data);
+                cssEditor.setValue(data.css,true);
+                htmlEditor.setValue(data.html,true);
+                
+                setTimeout(() => {
+                    $('#projectIframe').contents().find('body').html(data.html);
+                    $('#projectIframe').contents().find('style').html(data.css);
+                }, 100);
+                
+            });
+        }
+          function queryAllList() {
+                $.get("/service/getAllList", {}, function (data) {
+                    console.info(data);
+                    let html = '';
+                    data.forEach(element => {
+                        html += '<option value="' + element + '">' + element + '</option>';
+                    });
+                    queryCssModel(data[0]);
+                    $("#select_model_list").html(html);
+                });
+            }
+        $(function(){
+            $(".savetoDb").click(function(){
+                let key =  $("#select_model_list").val();
+                var css = cssEditor.getValue();
+                var html = htmlEditor.getValue();
+                $.post("/service/update",{key:key,data:{css:css,html:html}},function(data){
+                    console.info(data);
+                });
+            });
+            $(".deletecurrent").click(function(){
+                let key = $("#select_model_list").val();
+                $.get("/service/del",{key:key},function(data){
+                    console.info(data);
+                    queryAllList();
+                });
+            });
+            $(".addNew").click(function(){
+                let newkey = $("#newmodel-input").val();
+                $.post("/service/add",{ key: newkey,data:{css:'',html:''}},function(data){
+                    console.info(data);
+                    $("#select_model_list").append('<option value="' + newkey + '">' + newkey + '</option>').val(newkey);
+                    cssEditor.setValue('', true);
+                    htmlEditor.setValue('', true);
+                    $("#newmodel-input").val("");
+                    setTimeout(() => {
+                        $('#projectIframe').contents().find('body').html('');
+                        $('#projectIframe').contents().find('style').html('');
+                    }, 100);
+                });
+            });
+            queryAllList();
+            
+        });
+    </script>
+</body>
+</html>
+
